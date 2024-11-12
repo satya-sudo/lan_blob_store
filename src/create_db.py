@@ -14,7 +14,6 @@ DB_HOST = os.getenv("DB_HOST", "localhost")
 DB_PORT = os.getenv("DB_PORT", "5432")
 DB_NAME = os.getenv("DB_NAME", "blob_store")
 
-
 async def create_db():
     """
     creates the database for the server

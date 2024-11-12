@@ -1,16 +1,25 @@
-from quart import Quart, request, jsonify, send_from_directory
+"""
+Blob store 
+"""
 import os
+import uuid
+import asyncio
+from datetime import datetime
+from hypercorn.config import Config
+from hypercorn.asyncio import serve
+from quart import Quart, request, jsonify, send_from_directory
 from dotenv import load_dotenv
 import aiofiles
-from datetime import datetime
 import asyncpg
-import uuid
 
 load_dotenv()
 app = Quart(__name__)
 
-# Database connection settings
+# server ports
+SERVER_HOST = os.getenv("SERVER_HOST", "0.0.0.0")
+SERVER_PORT = os.getenv("SERVER_PORT", "5872")
 
+# Database connection settings
 DB_NAME = os.getenv("DB_NAME", "blob_store")
 DB_USER = os.getenv("DB_USER")
 DB_PASSWORD = os.getenv("DB_PASSWORD")
@@ -21,6 +30,8 @@ DATABASE_URL = f"postgresql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NA
 BLOB_LOCATION = os.getenv("BLOB_LOCATION", "~/blob_store")
 UPLOAD_FOLDER = os.path.expanduser(BLOB_LOCATION)
 
+
+print(DB_PASSWORD)
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 
@@ -29,7 +40,15 @@ async def create_db_pool():
     """
     connect to db
     """
-    app.db_pool = await asyncpg.create_pool(DATABASE_URL)
+    try:
+        app.db_pool = await asyncpg.create_pool(DATABASE_URL)
+    except (asyncpg.exceptions.ConnectionDoesNotExistError, 
+            asyncpg.exceptions.InvalidCatalogNameError) as e:
+        print(f"Database connection error: {e}")
+        app.db_pool = None
+    except Exception as e:
+        print(f"An error occurred while creating the database pool: {e}")
+        app.db_pool = None
 
 
 @app.after_serving
@@ -118,5 +137,9 @@ async def download_file(fileuuid):
         )
 
 
-if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5658)
+
+# runing the server in production
+config = Config()
+config.bind = [f"{SERVER_HOST}:{SERVER_PORT}"]
+
+asyncio.run(serve(app, config))

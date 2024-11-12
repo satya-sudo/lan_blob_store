@@ -1,0 +1,45 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:13
+    command: postgres -d 5  # Increase logging verbosity
+    environment:
+      POSTGRES_USER: ${DB_USER}        
+      POSTGRES_PASSWORD: ${DB_PASSWORD} 
+      POSTGRES_DB: ${DB_NAME}           
+    volumes:
+      - postgres_data:/var/lib/postgresql/data 
+    networks:
+      - app-network
+    ports:
+      - 2287:5432  
+
+  app:
+    image: lan-data-store  
+    build:
+      context: . 
+    environment:
+      BLOB_LOCATION: /blob_data 
+    env_file:
+      - .env  
+    networks:
+      - app-network
+    volumes:
+      - blob_storage:/blob_data  
+    ports:
+      - "8000:5872" 
+    command: ["python", "src/server.py"]
+
+networks:
+  app-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  blob_storage:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ${BLOB_LOCATION} 

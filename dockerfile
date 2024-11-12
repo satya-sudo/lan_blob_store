@@ -22,6 +22,5 @@ COPY src/ /app/src/
 RUN useradd -m blobuser && chown -R blobuser /app
 USER blobuser
 EXPOSE 8000
-# RUN pip install hypercorn
-# ENV PATH="/usr/local/bin:${PATH}"
+
 CMD ["python", "src/server.py"]
