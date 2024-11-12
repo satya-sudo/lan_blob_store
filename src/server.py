@@ -45,10 +45,7 @@ async def upload_file():
     """
     upload file to disk and update entry in the db
     """
-    # request = await request
-    # if 'file' not in request.files:
-    #     return jsonify({'error': 'No file part in the request'}), 400
-
+    
     files = await request.files
     if "file" not in files:
         return jsonify({"error": "No file part in the request"}), 400
