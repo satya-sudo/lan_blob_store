@@ -19,8 +19,10 @@ ENV PYTHONDONTWRITEBYTECODE 1
 WORKDIR /app
 COPY --from=build /usr/local/lib/python3.11/site-packages /usr/local/lib/python3.11/site-packages
 COPY src/ /app/src/
+COPY init.sh /app
+RUN chmod +x init.sh
 RUN useradd -m blobuser && chown -R blobuser /app
 USER blobuser
 EXPOSE 8000
 
-CMD ["python", "src/server.py"]
+CMD ["./init.sh"]

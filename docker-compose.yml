@@ -14,8 +14,14 @@ services:
       - app-network
     ports:
       - 2287:5432  
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER}"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 10s
 
-  app:
+  store:
     image: lan-data-store  
     build:
       context: . 
@@ -29,7 +35,10 @@ services:
       - blob_storage:/blob_data  
     ports:
       - "8000:5872" 
-    command: ["python", "src/server.py"]
+    command: ["./init.sh"]
+    depends_on:
+      postgres:
+        condition: service_healthy
 
 networks:
   app-network:
