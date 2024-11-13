@@ -2,12 +2,13 @@
 Blob store 
 """
 import os
+import shutil
 import uuid
 import asyncio
 from datetime import datetime
 from hypercorn.config import Config
 from hypercorn.asyncio import serve
-from quart import Quart, request, jsonify, send_from_directory
+from quart import Quart, request, jsonify, send_from_directory, Response
 from dotenv import load_dotenv
 import aiofiles
 import asyncpg
@@ -30,10 +31,7 @@ DATABASE_URL = f"postgresql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NA
 BLOB_LOCATION = os.getenv("BLOB_LOCATION", "~/blob_store")
 UPLOAD_FOLDER = os.path.expanduser(BLOB_LOCATION)
 
-
-print(DB_PASSWORD)
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
-
 
 @app.before_serving
 async def create_db_pool():
@@ -59,6 +57,29 @@ async def close_db_pool():
     await app.db_pool.close()
 
 
+@app.route("/", methods=["GET"])
+async def index():
+    """
+        Index and status api
+    """
+
+    total, used, free = shutil.disk_usage("/")
+
+    # Convert bytes to GB for readability
+    total_gb = total / (1024 ** 3)
+    used_gb = used / (1024 ** 3)
+    free_gb = free / (1024 ** 3)
+
+    response_data = {
+        "Status": "UP",
+        "TotalSpace": f"{total_gb} GB",
+        "FreeSpace": f"{used_gb} GB",
+        "UsedSpace": f"{free_gb} GB",
+    }
+
+    return jsonify(response_data), 200
+
+
 @app.route("/upload", methods=["POST"])
 async def upload_file():
     """
@@ -75,6 +96,7 @@ async def upload_file():
 
     # Save file asynchronously
     file_uuid = str(uuid.uuid4())
+    file_type = file.content_type
     file_name = file.filename.replace(" ", "_")
     file_path = os.path.join(UPLOAD_FOLDER, file_uuid + "_" + file_name)
     async with aiofiles.open(file_path, "wb") as f:
@@ -83,9 +105,10 @@ async def upload_file():
     # Store file metadata in the database
     async with app.db_pool.acquire() as conn:
         await conn.execute(
-            "INSERT INTO files (uuid, filename, upload_time) VALUES ($1, $2, $3)",
+            "INSERT INTO files (uuid, filename, file_type, upload_time) VALUES ($1, $2, $3, $4)",
             file_uuid,
             file_name,
+            file_type,
             datetime.now(),
         )
 
@@ -103,12 +126,13 @@ async def list_files():
     Retrieve file metadata from the database
     """
     async with app.db_pool.acquire() as conn:
-        rows = await conn.fetch("SELECT id, uuid, filename, upload_time FROM files")
+        rows = await conn.fetch("SELECT id, uuid, filename, file_type, upload_time FROM files")
         files = [
             {
                 "id": row["id"],
                 "uuid": row["uuid"],
                 "filename": row["filename"],
+                "filetype": row["file_type"],
                 "upload_time": row["upload_time"],
             }
             for row in rows
@@ -125,7 +149,6 @@ async def download_file(fileuuid):
         row = await conn.fetchrow(
             "SELECT filename FROM files WHERE uuid = $1", fileuuid
         )
-        print("Sdf", row)
 
         if not row:
             return jsonify({"error": "File not found"}), 404
@@ -136,7 +159,43 @@ async def download_file(fileuuid):
             UPLOAD_FOLDER, f"{file_path}", as_attachment=True
         )
 
+@app.route("/stream/<fileuuid>", methods=["GET"])
+async def stream_video(fileuuid):
+    """
+    Stream video content with support for range requests
+    """
+    async with app.db_pool.acquire() as conn:
+        row = await conn.fetchrow("SELECT filename, file_type FROM files WHERE uuid = $1", fileuuid)
+        if not row:
+            return jsonify({"error": "File not found"}), 404
 
+        file_type = row["file_type"]
+        if not file_type.startswith("video/"):
+            return jsonify({"error": "Requested file is not a video"}), 400
+        filename = row["filename"]
+        file_path = os.path.join(UPLOAD_FOLDER, f"{fileuuid}_{filename}")
+
+        range_header = request.headers.get('Range', None)
+        file_size = os.path.getsize(file_path)
+
+        if range_header:
+            start, end = range_header.replace("bytes=", "").split("-")
+            start = int(start)
+            end = int(end) if end else file_size - 1
+        else:
+            start, end = 0, file_size - 1
+
+        async with aiofiles.open(file_path, "rb") as f:
+            await f.seek(start)
+            chunk_size = end - start + 1
+            data = await f.read(chunk_size)
+
+        response = Response(data, status=206, mimetype=file_type)
+        response.headers.add("Content-Range", f"bytes {start}-{end}/{file_size}")
+        response.headers.add("Accept-Ranges", "bytes")
+        response.headers.add("Content-Length", str(chunk_size))
+
+        return response
 
 # runing the server in production
 config = Config()

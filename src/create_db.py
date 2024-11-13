@@ -51,8 +51,9 @@ async def create_db():
             """
             CREATE TABLE IF NOT EXISTS files (
                 id SERIAL PRIMARY KEY,
-                 uuid UUID DEFAULT uuid_generate_v4(), 
+                uuid UUID DEFAULT uuid_generate_v4(), 
                 filename TEXT NOT NULL,
+                file_type VARCHAR(255),
                 upload_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             );
         """
