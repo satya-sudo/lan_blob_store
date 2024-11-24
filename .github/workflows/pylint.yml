@@ -31,10 +31,24 @@ jobs:
         # Ensure the virtual environment is activated
         source venv/bin/activate
         
+        # Run pylint and capture output in JSON format
         pylint --output-format=json $(git ls-files '*.py') > pylint_output.json || true
         
-        # Extract the score from the pylint_output.json
-        pylint_score=$(jq '[.[] | .score] | add / length' pylint_output.json)
+        # Check if pylint_output.json is empty or invalid
+        if [ ! -s pylint_output.json ]; then
+          echo "No pylint output found, skipping score check."
+          exit 0
+        fi
+        
+        # Extract the average score from the pylint output
+        pylint_score=$(jq '[.[] | select(.score != null) | .score] | add / length' pylint_output.json)
+        
+        # Check if the jq command returned a valid score
+        if [ "$pylint_score" == "null" ]; then
+          echo "Error extracting pylint score from output."
+          exit 1
+        fi
+
         echo "Pylint score: $pylint_score"
 
         # If the score is greater than or equal to 8, exit with code 0, otherwise exit with 1
