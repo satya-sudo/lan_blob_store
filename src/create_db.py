@@ -1,8 +1,11 @@
+"""
+Create the blob database and the table 
+"""
+import os
+import sys
 import asyncio
 import asyncpg
 from dotenv import load_dotenv
-import os
-import sys
 
 # Load environment variables from .env file
 load_dotenv(override=True)
@@ -59,6 +62,17 @@ async def create_db():
         """
         )
         print("Table 'files' created (or already exists).")
+        await conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS users (
+                id SERIAL PRIMARY KEY,
+                username VARCHAR(255) UNIQUE NOT NULL,
+                password_hash TEXT NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+        """
+        )
+        print("Table 'users' created (or already exists).")
     except asyncpg.PostgresError as e:
         print(f"Error while creating database: {e}")
         sys.exit(1)
