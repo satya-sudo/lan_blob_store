@@ -1,63 +1,19 @@
 """
-Blob store 
+    Routes and controller for file and blob, stream store
 """
 import os
 import shutil
 import uuid
-import asyncio
 from datetime import datetime
-from hypercorn.config import Config
-from hypercorn.asyncio import serve
-from quart import Quart, request, jsonify, send_from_directory, Response
-from dotenv import load_dotenv
 import aiofiles
-import asyncpg
+from quart import Blueprint, request, jsonify, \
+    send_from_directory, Response, current_app
+from auth.auth_middleware import token_required
 
-load_dotenv()
-app = Quart(__name__)
-
-# server ports
-SERVER_HOST = os.getenv("SERVER_HOST", "0.0.0.0")
-SERVER_PORT = os.getenv("SERVER_PORT", "5872")
-
-# Database connection settings
-DB_NAME = os.getenv("DB_NAME", "blob_store")
-DB_USER = os.getenv("DB_USER")
-DB_PASSWORD = os.getenv("DB_PASSWORD")
-DB_HOST = os.getenv("DB_HOST", "localhost")
-DB_PORT = os.getenv("DB_PORT", "2287")
-DATABASE_URL = f"postgresql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
-
-BLOB_LOCATION = os.getenv("BLOB_LOCATION", "~/blob_store")
-UPLOAD_FOLDER = os.path.expanduser(BLOB_LOCATION)
-
-os.makedirs(UPLOAD_FOLDER, exist_ok=True)
-
-@app.before_serving
-async def create_db_pool():
-    """
-    connect to db
-    """
-    try:
-        app.db_pool = await asyncpg.create_pool(DATABASE_URL)
-    except (asyncpg.exceptions.ConnectionDoesNotExistError, 
-            asyncpg.exceptions.InvalidCatalogNameError) as e:
-        print(f"Database connection error: {e}")
-        app.db_pool = None
-    except Exception as e:
-        print(f"An error occurred while creating the database pool: {e}")
-        app.db_pool = None
+files_bp = Blueprint("files", __name__)
 
 
-@app.after_serving
-async def close_db_pool():
-    """
-    close the db connection
-    """
-    await app.db_pool.close()
-
-
-@app.route("/", methods=["GET"])
+@files_bp.route("/", methods=["GET"])
 async def index():
     """
         Index and status api
@@ -80,12 +36,13 @@ async def index():
     return jsonify(response_data), 200
 
 
-@app.route("/upload", methods=["POST"])
+@files_bp.route("/upload", methods=["POST"])
+@token_required
 async def upload_file():
     """
     upload file to disk and update entry in the db
     """
-    
+
     files = await request.files
     if "file" not in files:
         return jsonify({"error": "No file part in the request"}), 400
@@ -98,12 +55,13 @@ async def upload_file():
     file_uuid = str(uuid.uuid4())
     file_type = file.content_type
     file_name = file.filename.replace(" ", "_")
-    file_path = os.path.join(UPLOAD_FOLDER, file_uuid + "_" + file_name)
+    file_path = os.path.join(
+        current_app.config["UPLOAD_FOLDER"], file_uuid + "_" + file_name)
     async with aiofiles.open(file_path, "wb") as f:
         await f.write(file.read())
 
     # Store file metadata in the database
-    async with app.db_pool.acquire() as conn:
+    async with current_app.db_pool.acquire() as conn:
         await conn.execute(
             "INSERT INTO files (uuid, filename, file_type, upload_time) VALUES ($1, $2, $3, $4)",
             file_uuid,
@@ -120,12 +78,13 @@ async def upload_file():
     )
 
 
-@app.route("/files", methods=["GET"])
+@files_bp.route("/files", methods=["GET"])
+@token_required
 async def list_files():
     """
     Retrieve file metadata from the database
     """
-    async with app.db_pool.acquire() as conn:
+    async with current_app.db_pool.acquire() as conn:
         rows = await conn.fetch("SELECT id, uuid, filename, file_type, upload_time FROM files")
         files = [
             {
@@ -141,11 +100,12 @@ async def list_files():
     return jsonify(files)
 
 
-@app.route("/download/<fileuuid>", methods=["GET"])
+@files_bp.route("/download/<fileuuid>", methods=["GET"])
+@token_required
 async def download_file(fileuuid):
     """Serve file asynchronously by UUID for download."""
 
-    async with app.db_pool.acquire() as conn:
+    async with current_app.db_pool.acquire() as conn:
         row = await conn.fetchrow(
             "SELECT filename FROM files WHERE uuid = $1", fileuuid
         )
@@ -156,15 +116,16 @@ async def download_file(fileuuid):
         filename = row["filename"]
         file_path = f"{fileuuid}_{filename}"
         return await send_from_directory(
-            UPLOAD_FOLDER, f"{file_path}", as_attachment=True
+            current_app.config["UPLOAD_FOLDER"], f"{file_path}", as_attachment=True
         )
 
-@app.route("/stream/<fileuuid>", methods=["GET"])
+
+@files_bp.route("/stream/<fileuuid>", methods=["GET"])
 async def stream_video(fileuuid):
     """
     Stream video content with support for range requests
     """
-    async with app.db_pool.acquire() as conn:
+    async with current_app.db_pool.acquire() as conn:
         row = await conn.fetchrow("SELECT filename, file_type FROM files WHERE uuid = $1", fileuuid)
         if not row:
             return jsonify({"error": "File not found"}), 404
@@ -173,7 +134,8 @@ async def stream_video(fileuuid):
         if not file_type.startswith("video/"):
             return jsonify({"error": "Requested file is not a video"}), 400
         filename = row["filename"]
-        file_path = os.path.join(UPLOAD_FOLDER, f"{fileuuid}_{filename}")
+        file_path = os.path.join(
+            current_app.config["UPLOAD_FOLDER"], f"{fileuuid}_{filename}")
 
         range_header = request.headers.get('Range', None)
         file_size = os.path.getsize(file_path)
@@ -191,14 +153,9 @@ async def stream_video(fileuuid):
             data = await f.read(chunk_size)
 
         response = Response(data, status=206, mimetype=file_type)
-        response.headers.add("Content-Range", f"bytes {start}-{end}/{file_size}")
+        response.headers.add(
+            "Content-Range", f"bytes {start}-{end}/{file_size}")
         response.headers.add("Accept-Ranges", "bytes")
         response.headers.add("Content-Length", str(chunk_size))
 
         return response
-
-# runing the server in production
-config = Config()
-config.bind = [f"{SERVER_HOST}:{SERVER_PORT}"]
-
-asyncio.run(serve(app, config))

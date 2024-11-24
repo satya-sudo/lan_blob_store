@@ -52,6 +52,11 @@ async def create_db():
         await conn.execute('CREATE EXTENSION IF NOT EXISTS "uuid-ossp";')
         await conn.execute(
             """
+            DROP TABLE IF EXISTS files;
+        """
+        )
+        await conn.execute(
+            """
             CREATE TABLE IF NOT EXISTS files (
                 id SERIAL PRIMARY KEY,
                 uuid UUID DEFAULT uuid_generate_v4(), 
