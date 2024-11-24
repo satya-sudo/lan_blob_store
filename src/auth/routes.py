@@ -55,7 +55,7 @@ async def login():
     async with current_app.db_pool.acquire() as conn:
         row = await conn.fetchrow("SELECT password_hash FROM users WHERE username = $1", username)
         if not row or not verify_password(password=password, hashed=row["password_hash"]):
-            return jsonify({"error": "username does not exists"}), 400
+            return jsonify({"error": "Invalid credentials"}), 400
 
         token = create_jwt(
             username=username,
@@ -65,7 +65,7 @@ async def login():
     return jsonify({"token": token}), 200
 
 
-@auth_bp.route("/reset", method=["POST"])
+@auth_bp.route("/reset", methods=["POST"])
 @token_required
 async def reset():
     """
@@ -88,7 +88,7 @@ async def reset():
 
         await conn.execute(
             "UPDATE users SET password_hash = $1 WHERE username = $2",
-            hashed_password.decode("utf-8"),
+            hashed_password,
             username
         )
     return jsonify({"success": "password updated"}), 201

@@ -1,0 +1,203 @@
+{
+	"info": {
+		"_postman_id": "0a1447b8-6d71-487d-88db-a4eb14e4f203",
+		"name": "local_blob",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "14568443"
+	},
+	"item": [
+		{
+			"name": "auth",
+			"item": [
+				{
+					"name": "register",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"username\": \"satyam\",\n    \"password\": \"password\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://Satyams-MacBook-Pro.local:5872/auth/register",
+							"protocol": "http",
+							"host": [
+								"Satyams-MacBook-Pro",
+								"local"
+							],
+							"port": "5872",
+							"path": [
+								"auth",
+								"register"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "login",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"username\": \"satyam\",\n    \"password\": \"satyam\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://Satyams-MacBook-Pro.local:5872/auth/login",
+							"protocol": "http",
+							"host": [
+								"Satyams-MacBook-Pro",
+								"local"
+							],
+							"port": "5872",
+							"path": [
+								"auth",
+								"login"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "reset",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VybmFtZSI6InNhdHlhbSIsImV4cCI6MTczMjQ3MTMzNH0.M9Rhr4ZY07-gxUScidPR0A-TbLxieI7M39Hj6F07CC0",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"old_password\": \"password\",\n    \"new_password\": \"satyam\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://Satyams-MacBook-Pro.local:5872/auth/reset",
+							"protocol": "http",
+							"host": [
+								"Satyams-MacBook-Pro",
+								"local"
+							],
+							"port": "5872",
+							"path": [
+								"auth",
+								"reset"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "files",
+			"item": [
+				{
+					"name": "download",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://Satyams-MacBook-Pro.local:5658/download/4ca1372c-2a65-4c5a-86b3-18b3a9a129b2",
+							"protocol": "http",
+							"host": [
+								"Satyams-MacBook-Pro",
+								"local"
+							],
+							"port": "5658",
+							"path": [
+								"download",
+								"4ca1372c-2a65-4c5a-86b3-18b3a9a129b2"
+							]
+						},
+						"description": "Generated from cURL: curl -X GET http://Satyams-MacBook-Pro.local:5658/download/your_file.ext -O\n"
+					},
+					"response": []
+				},
+				{
+					"name": "list files",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VybmFtZSI6InNhdHlhbSIsImV4cCI6MTczMjQ3MTUzMX0.xouS1ch16LKxjnBmqCEBrFTu3sPTT_Seri1OEl0DqzI",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "http://Satyams-MacBook-Pro.local:5872/files/files",
+							"protocol": "http",
+							"host": [
+								"Satyams-MacBook-Pro",
+								"local"
+							],
+							"port": "5872",
+							"path": [
+								"files",
+								"files"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "upload",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VybmFtZSI6InNhdHlhbSIsImV4cCI6MTczMjQ3MTUzMX0.xouS1ch16LKxjnBmqCEBrFTu3sPTT_Seri1OEl0DqzI",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "file",
+									"type": "file",
+									"src": "/Users/satyamshree/Downloads/WhatsApp Video 2024-09-26 at 12.41.31.mp4"
+								}
+							]
+						},
+						"url": {
+							"raw": "http://Satyams-MacBook-Pro.local:5872/files/upload",
+							"protocol": "http",
+							"host": [
+								"Satyams-MacBook-Pro",
+								"local"
+							],
+							"port": "5872",
+							"path": [
+								"files",
+								"upload"
+							]
+						},
+						"description": "Generated from cURL: curl -X POST -F \"file=@path/to/yourfile.jpg\" http://<your_local_ip>:5000/upload\n"
+					},
+					"response": []
+				}
+			]
+		}
+	]
+}

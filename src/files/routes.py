@@ -13,7 +13,7 @@ from auth.auth_middleware import token_required
 files_bp = Blueprint("files", __name__)
 
 
-@files_bp.route("/", method=["GET"])
+@files_bp.route("/", methods=["GET"])
 async def index():
     """
         Index and status api
