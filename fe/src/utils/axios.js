@@ -1,7 +1,7 @@
 import axios from "axios";
 
 const axiosInstance = axios.create({
-    baseURL: "http://Satyams-MacBook-Pro.local:5872", // Default base URL
+    baseURL: "http://ssrmac.local:8000", // Default base URL
     timeout: 10000, // Request timeout in milliseconds
     headers: {
         "Content-Type": "application/json",

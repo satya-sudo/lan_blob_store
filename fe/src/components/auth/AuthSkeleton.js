@@ -1,6 +1,7 @@
 import React from "react";
 import { Box, Typography, TextField, Button } from "@mui/material";
 import StorageIcon from "@mui/icons-material/Storage";
+import { Link } from "react-router-dom";
 
 const FormSkeleton = ({ title, fields, buttonText, onSubmit }) => (
     <Box
@@ -61,6 +62,8 @@ const FormSkeleton = ({ title, fields, buttonText, onSubmit }) => (
                 {buttonText}
             </Button>
         </Box>
+        <br/>
+        <Link  to={title === "Login" ? "/register": "/login"}>{title === "Login" ? "Register": "Login"}</Link>
     </Box>
 );
 

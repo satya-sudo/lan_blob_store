@@ -1,14 +1,22 @@
 // src/components/Login.js
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { loginRequest } from "./authSlice";
 import AuthSkeleton from "./AuthSkeleton";
+import { useNavigate } from "react-router-dom";
 
 const Login = () => {
     const [username, setUsername] = useState("");
     const [password, setPassword] = useState("");
     const dispatch = useDispatch();
-    const { loading, error } = useSelector((state) => state.auth);
+    const navigate = useNavigate();
+    const { user, loading, error } = useSelector((state) => state.auth);
+
+    useEffect(() => {
+        if (user) {
+            navigate("/dashboard");
+        }
+    }, [user, navigate]);
 
     const handleSubmit = (e) => {
         e.preventDefault();
