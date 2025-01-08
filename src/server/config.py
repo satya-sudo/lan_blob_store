@@ -6,6 +6,7 @@
 import os
 from dotenv import load_dotenv
 from quart import Quart
+from quart_cors import cors
 
 load_dotenv()
 
@@ -42,5 +43,5 @@ def create_app():
     app.config["JWT_EXPIRY_HOURS"] = int(JWT_EXPIRY_HOURS)
     app.config["DATABASE_URL"] = DATABASE_URL
     app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
-
+    app = cors(app, allow_origin="*")
     return app
